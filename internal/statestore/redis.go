@@ -224,15 +224,20 @@ func redisURLFromAddr(addr string, cfg config.View, usePassword bool) string {
 
 	// Add redis user and password to connection url if they exist
 	redisURL := "redis://"
-
 	if usePassword {
-		passwordFile := cfg.GetString("redis.passwordPath")
-		redisLogger.Debugf("loading Redis password from file %s", passwordFile)
-		passwordData, err := ioutil.ReadFile(passwordFile)
-		if err != nil {
-			redisLogger.Fatalf("cannot read Redis password from file %s, desc: %s", passwordFile, err.Error())
+		password := ""
+		if cfg.IsSet("redis.password") {
+			password = cfg.GetString("redis.password")
+		} else {
+			passwordFile := cfg.GetString("redis.passwordPath")
+			redisLogger.Debugf("loading Redis password from file %s", passwordFile)
+			passwordData, err := ioutil.ReadFile(passwordFile)
+			if err != nil {
+				redisLogger.Fatalf("cannot read Redis password from file %s, desc: %s", passwordFile, err.Error())
+			}
+			password = string(passwordData)
 		}
-		redisURL += fmt.Sprintf("%s:%s@", cfg.GetString("redis.user"), string(passwordData))
+		redisURL += fmt.Sprintf("%s:%s@", cfg.GetString("redis.user"), password)
 	}
 
 	return redisURL + addr
