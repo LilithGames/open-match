@@ -18,6 +18,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
@@ -53,6 +54,10 @@ func Read() (*viper.Viper, error) {
 	// The config path needs to be the same as the volumeMountPath defined via helm
 	cfg.AddConfigPath("/app/config/override")
 	cfg.SetConfigName("matchmaker_config_override")
+
+	cfg.SetEnvPrefix("OM")
+	cfg.AutomaticEnv()
+	cfg.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	err = cfg.ReadInConfig()
 	if err != nil {
 		return nil, fmt.Errorf("fatal error reading override config file, desc: %s", err.Error())
