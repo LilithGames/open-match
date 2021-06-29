@@ -27,7 +27,7 @@ import (
 //  - log line format (text[default] or json)
 //  - min log level to include (debug, info [default], warn, error, fatal, panic)
 func ConfigureLogging(cfg config.View) {
-	logrus.SetFormatter(newFormatter(cfg.GetString("logging.format")))
+	logrus.SetFormatter(newFormatter(cfg.GetString("logging.format"), cfg.GetString("logging.timestampFormat")))
 	level := toLevel(cfg.GetString("logging.level"))
 	logrus.SetLevel(level)
 	if isDebugLevel(level) {
@@ -35,14 +35,20 @@ func ConfigureLogging(cfg config.View) {
 	}
 }
 
-func newFormatter(formatter string) logrus.Formatter {
+func newFormatter(formatter string, timestampFormatter string) logrus.Formatter {
 	switch strings.ToLower(formatter) {
 	case "stackdriver":
 		return stackdriver.NewFormatter()
 	case "json":
 		return &logrus.JSONFormatter{}
 	}
-	return &logrus.TextFormatter{}
+
+	textFormatter := &logrus.TextFormatter{}
+	if timestampFormatter != "" {
+		textFormatter.TimestampFormat = timestampFormatter
+		textFormatter.FullTimestamp = true
+	}
+	return textFormatter
 }
 
 func toLevel(level string) logrus.Level {
