@@ -783,7 +783,11 @@ lint: fmt vet golangci lint-chart terraform-lint
 
 assets: $(ALL_PROTOS) tls-certs third_party/ build/chart/
 
+leader-election:
+		@cd ${REPOSITORY_ROOT}/tools/k8s-await-election && go build
+
 build/cmd: $(foreach CMD,$(CMDS),build/cmd/$(CMD))
+
 
 # Building a given build/cmd folder is split into two pieces: BUILD_PHONY and
 # COPY_PHONY.  The BUILD_PHONY is the common go build command, which is
@@ -798,6 +802,10 @@ build/cmd/%/BUILD_PHONY:
 # Default is that nothing needs to be copied into the direcotry
 build/cmd/%/COPY_PHONY:
 	#
+
+build/cmd/synchronizer/COPY_PHONY:leader-election
+	mkdir -p ${BUILD_DIR}/tool
+	cp ${REPOSITORY_ROOT}/tools/k8s-await-election/k8s-await-election ${BUILD_DIR}/tool/leader-election
 
 build/cmd/swaggerui/COPY_PHONY:
 	mkdir -p $(BUILD_DIR)/cmd/swaggerui/static/api
