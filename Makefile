@@ -88,7 +88,7 @@ GCP_PROJECT_ID ?=
 GCP_PROJECT_FLAG = --project=$(GCP_PROJECT_ID)
 OPEN_MATCH_BUILD_PROJECT_ID = open-match-build
 OPEN_MATCH_PUBLIC_IMAGES_PROJECT_ID = open-match-public-images
-REGISTRY ?= 
+REGISTRY ?=  lilith-registry.cn-shanghai.cr.aliyuncs.com/avatar
 TAG = $(VERSION)
 ALTERNATE_TAG = dev
 VERSIONED_CANARY_TAG = $(BASE_VERSION)-canary
@@ -699,7 +699,6 @@ api/%.swagger.json: api/%.proto third_party/ build/toolchain/bin/protoc$(EXE_EXT
 		-I $(REPOSITORY_ROOT) -I $(PROTOC_INCLUDES) \
 		--openapiv2_out=json_names_for_fields=false,logtostderr=true,allow_delete_body=true:$(REPOSITORY_ROOT)
 
-
 ## # Build API reference in markdown. Needs open-match-docs repo at the same level as this one.
 ## make api/api.md
 ##
@@ -775,6 +774,9 @@ vet:
 golangci: build/toolchain/bin/golangci-lint$(EXE_EXTENSION)
 	GO111MODULE=on $(GOLANGCI) run --config=$(REPOSITORY_ROOT)/.golangci.yaml
 
+leader-election:
+	@cd ${REPOSITORY_ROOT}/tools/k8s-await-election && go build 
+
 ## # Run linter on Go code, charts and terraform
 ## make lint
 ##
@@ -790,14 +792,16 @@ build/cmd: $(foreach CMD,$(CMDS),build/cmd/$(CMD))
 # files to be included in the image.
 $(foreach CMD,$(CMDS),build/cmd/$(CMD)): build/cmd/%: build/cmd/%/BUILD_PHONY build/cmd/%/COPY_PHONY
 
-build/cmd/%/BUILD_PHONY:
+build/cmd/%/BUILD_PHONY: 
 	mkdir -p $(BUILD_DIR)/cmd/$*
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -o $(BUILD_DIR)/cmd/$*/run open-match.dev/open-match/cmd/$*
 
 # Default is that nothing needs to be copied into the direcotry
-build/cmd/%/COPY_PHONY:
-	#
+build/cmd/synchronizer/COPY_PHONY:leader-election
+	mkdir -p ${BUILD_DIR}/tool
+	cp ${REPOSITORY_ROOT}/tools/k8s-await-election/k8s-await-election ${BUILD_DIR}/tool/leader-election
 
+	
 build/cmd/swaggerui/COPY_PHONY:
 	mkdir -p $(BUILD_DIR)/cmd/swaggerui/static/api
 	cp third_party/swaggerui/* $(BUILD_DIR)/cmd/swaggerui/static/
@@ -983,7 +987,7 @@ proxy:
 update-deps:
 	$(GO) mod tidy
 
-third_party/: third_party/google/api third_party/protoc-gen-openapiv2/options third_party/swaggerui/
+third_party/: third_party/google/api third_party/protoc-gen-openapiv2/options third_party/swaggerui/ 
 
 third_party/google/api:
 	mkdir -p $(TOOLCHAIN_DIR)/googleapis-temp/
