@@ -24,9 +24,11 @@ FROM gcr.io/distroless/static:nonroot
 ARG IMAGE_TITLE
 WORKDIR /app/
 
-COPY --from=builder --chown=nonroot "/go/src/open-match.dev/open-match/build/cmd/${IMAGE_TITLE}/" "/app/"
+COPY --from=builder --chown=nonroot "/go/src/open-match.dev/open-match/build/cmd/${IMAGE_TITLE}/" "/app/${IMAGE_TITLE}/run"
+COPY --from=builder --chown=nonroot "/go/src/open-match.dev/open-match/build/tool/leader-election" "/app/leader-election"
 
-ENTRYPOINT ["/app/run"]
+ENV IMAGE_TITLE ${IMAGE_TITLE}
+CMD ["/app/${IMAGE_TITILE}/run"]
 
 # Docker Image Arguments
 ARG BUILD_DATE
