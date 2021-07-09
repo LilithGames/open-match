@@ -20,13 +20,14 @@ ARG IMAGE_TITLE
 
 RUN make "build/cmd/${IMAGE_TITLE}"
 
-FROM gcr.io/distroless/static:nonroot
+FROM golang:1.14.0-buster
 ARG IMAGE_TITLE
 WORKDIR /app/
 
 COPY --from=builder --chown=nonroot "/go/src/open-match.dev/open-match/build/cmd/${IMAGE_TITLE}/" "/app/"
+COPY --from=builder --chown=nonroot "/go/src/open-match.dev/open-match/build/tool/leader-election" "/app/leader-election"
 
-ENTRYPOINT ["/app/run"]
+CMD ["/app/run"]
 
 # Docker Image Arguments
 ARG BUILD_DATE

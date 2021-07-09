@@ -782,7 +782,14 @@ lint: fmt vet golangci lint-chart terraform-lint
 
 assets: $(ALL_PROTOS) tls-certs third_party/ build/chart/
 
+leader-election:
+		@cd ${REPOSITORY_ROOT}/tools/k8s-await-election && go build
+		mkdir -p ${BUILD_DIR}/tool
+		cp ${REPOSITORY_ROOT}/tools/k8s-await-election/k8s-await-election ${BUILD_DIR}/tool/leader-election
+
+
 build/cmd: $(foreach CMD,$(CMDS),build/cmd/$(CMD))
+
 
 # Building a given build/cmd folder is split into two pieces: BUILD_PHONY and
 # COPY_PHONY.  The BUILD_PHONY is the common go build command, which is
@@ -790,7 +797,7 @@ build/cmd: $(foreach CMD,$(CMDS),build/cmd/$(CMD))
 # files to be included in the image.
 $(foreach CMD,$(CMDS),build/cmd/$(CMD)): build/cmd/%: build/cmd/%/BUILD_PHONY build/cmd/%/COPY_PHONY
 
-build/cmd/%/BUILD_PHONY:
+build/cmd/%/BUILD_PHONY: leader-election
 	mkdir -p $(BUILD_DIR)/cmd/$*
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -o $(BUILD_DIR)/cmd/$*/run open-match.dev/open-match/cmd/$*
 
