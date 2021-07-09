@@ -20,8 +20,7 @@ ARG IMAGE_TITLE
 
 RUN make "build/cmd/${IMAGE_TITLE}"
 
-#FROM gcr.io/distroless/static:nonroot
-FROM golang:1.14.0-buster
+FROM gcr.io/distroless/static:nonroot
 ARG IMAGE_TITLE
 WORKDIR /app/
 
