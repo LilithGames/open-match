@@ -785,6 +785,9 @@ assets: $(ALL_PROTOS) tls-certs third_party/ build/chart/
 
 leader-election:
 		@cd ${REPOSITORY_ROOT}/tools/k8s-await-election && go build
+		mkdir -p ${BUILD_DIR}/tool
+		cp ${REPOSITORY_ROOT}/tools/k8s-await-election/k8s-await-election ${BUILD_DIR}/tool/leader-election
+
 
 build/cmd: $(foreach CMD,$(CMDS),build/cmd/$(CMD))
 
@@ -795,17 +798,13 @@ build/cmd: $(foreach CMD,$(CMDS),build/cmd/$(CMD))
 # files to be included in the image.
 $(foreach CMD,$(CMDS),build/cmd/$(CMD)): build/cmd/%: build/cmd/%/BUILD_PHONY build/cmd/%/COPY_PHONY
 
-build/cmd/%/BUILD_PHONY:
+build/cmd/%/BUILD_PHONY: leader-election
 	mkdir -p $(BUILD_DIR)/cmd/$*
 	CGO_ENABLED=0 $(GO) build -a -installsuffix cgo -o $(BUILD_DIR)/cmd/$*/run open-match.dev/open-match/cmd/$*
 
 # Default is that nothing needs to be copied into the direcotry
 build/cmd/%/COPY_PHONY:
 	#
-
-build/cmd/synchronizer/COPY_PHONY:leader-election
-	mkdir -p ${BUILD_DIR}/tool
-	cp ${REPOSITORY_ROOT}/tools/k8s-await-election/k8s-await-election ${BUILD_DIR}/tool/leader-election
 
 build/cmd/swaggerui/COPY_PHONY:
 	mkdir -p $(BUILD_DIR)/cmd/swaggerui/static/api
