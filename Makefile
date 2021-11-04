@@ -77,7 +77,7 @@ CHART_TESTING_VERSION = 2.4.0
 REDIS_DEV_PASSWORD = helloworld
 
 ENABLE_SECURITY_HARDENING = 0
-GO = GO111MODULE=on go
+GO = GO111MODULE=on GOOS=linux GOARCH=amd64 go
 # Defines the absolute local directory of the open-match project
 REPOSITORY_ROOT := $(patsubst %/,%,$(dir $(abspath $(MAKEFILE_LIST))))
 BUILD_DIR = $(REPOSITORY_ROOT)/build
@@ -784,7 +784,7 @@ lint: fmt vet golangci lint-chart terraform-lint
 assets: $(ALL_PROTOS) tls-certs third_party/ build/chart/
 
 leader-election:
-		@cd ${REPOSITORY_ROOT}/tools/k8s-await-election && go build
+		@cd ${REPOSITORY_ROOT}/tools/k8s-await-election && $(GO) build
 		mkdir -p ${BUILD_DIR}/tool
 		cp ${REPOSITORY_ROOT}/tools/k8s-await-election/k8s-await-election ${BUILD_DIR}/tool/leader-election
 
