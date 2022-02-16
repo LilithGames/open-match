@@ -78,6 +78,8 @@ REDIS_DEV_PASSWORD = helloworld
 
 ENABLE_SECURITY_HARDENING = 0
 GO = GO111MODULE=on GOOS=linux GOARCH=amd64 go
+
+DOCKER_BUILD ?= docker build --platform linux/amd64 
 # Defines the absolute local directory of the open-match project
 REPOSITORY_ROOT := $(patsubst %/,%,$(dir $(abspath $(MAKEFILE_LIST))))
 BUILD_DIR = $(REPOSITORY_ROOT)/build
@@ -198,7 +200,7 @@ ALL_PROTOS = $(GOLANG_PROTOS) $(SWAGGER_JSON_DOCS)
 CMDS = $(notdir $(wildcard cmd/*))
 
 # Names of the individual images, ommiting the openmatch prefix.
-IMAGES = $(CMDS) mmf-go-soloduel mmf-go-backfill base-build
+IMAGES ?= $(CMDS) mmf-go-soloduel mmf-go-backfill base-build
 
 help:
 	@cat Makefile | grep ^\#\# | grep -v ^\#\#\# |cut -c 4-
@@ -228,10 +230,10 @@ build-images: $(foreach IMAGE,$(IMAGES),build-$(IMAGE)-image)
 # Include all-protos here so that all dependencies are guaranteed to be downloaded after the base image is created.
 # This is important so that the repository does not have any mutations while building individual images.
 build-base-build-image: docker $(ALL_PROTOS)
-	docker build -f Dockerfile.base-build -t open-match-base-build -t $(REGISTRY)/openmatch-base-build:$(TAG) -t $(REGISTRY)/openmatch-base-build:$(ALTERNATE_TAG) .
+	$(DOCKER_BUILD) -f Dockerfile.base-build -t open-match-base-build -t $(REGISTRY)/openmatch-base-build:$(TAG) -t $(REGISTRY)/openmatch-base-build:$(ALTERNATE_TAG) .
 
 $(foreach CMD,$(CMDS),build-$(CMD)-image): build-%-image: docker build-base-build-image
-	docker build \
+	$(DOCKER_BUILD) \
 		-f Dockerfile.cmd \
 		$(IMAGE_BUILD_ARGS) \
 		--build-arg=IMAGE_TITLE=$* \
@@ -240,10 +242,10 @@ $(foreach CMD,$(CMDS),build-$(CMD)-image): build-%-image: docker build-base-buil
 		.
 
 build-mmf-go-soloduel-image: docker build-base-build-image
-	docker build -f examples/functions/golang/soloduel/Dockerfile -t $(REGISTRY)/openmatch-mmf-go-soloduel:$(TAG) -t $(REGISTRY)/openmatch-mmf-go-soloduel:$(ALTERNATE_TAG) .
+	$(DOCKER_BUILD) -f examples/functions/golang/soloduel/Dockerfile -t $(REGISTRY)/openmatch-mmf-go-soloduel:$(TAG) -t $(REGISTRY)/openmatch-mmf-go-soloduel:$(ALTERNATE_TAG) .
 
 build-mmf-go-backfill-image: docker build-base-build-image
-	docker build -f examples/functions/golang/backfill/Dockerfile -t $(REGISTRY)/openmatch-mmf-go-backfill:$(TAG) -t $(REGISTRY)/openmatch-mmf-go-backfill:$(ALTERNATE_TAG) .
+	$(DOCKER_BUILD) -f examples/functions/golang/backfill/Dockerfile -t $(REGISTRY)/openmatch-mmf-go-backfill:$(TAG) -t $(REGISTRY)/openmatch-mmf-go-backfill:$(ALTERNATE_TAG) .
 
 #######################################
 ## # Builds and pushes images to your container registry.

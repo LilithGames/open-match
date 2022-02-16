@@ -16,6 +16,7 @@ package minimatch
 
 import (
 	"open-match.dev/open-match/internal/app/backend"
+	"open-match.dev/open-match/internal/app/evaluator/defaulteval"
 	"open-match.dev/open-match/internal/app/frontend"
 	"open-match.dev/open-match/internal/app/query"
 	"open-match.dev/open-match/internal/app/synchronizer"
@@ -33,6 +34,10 @@ func BindService(p *appmain.Params, b *appmain.Bindings) error {
 	}
 
 	if err := query.BindService(p, b); err != nil {
+		return err
+	}
+
+	if err := defaulteval.BindService(p, b); err != nil {
 		return err
 	}
 
