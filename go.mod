@@ -30,7 +30,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-redsync/redsync/v4 v4.3.0
 	github.com/gogo/protobuf v1.3.1 // indirect
-	github.com/golang/protobuf v1.4.3
+	github.com/golang/protobuf v1.5.2
 	github.com/gomodule/redigo v2.0.1-0.20191111085604-09d84710e01a+incompatible
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
@@ -40,13 +40,14 @@ require (
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.8.0
-	github.com/pseudomuto/protoc-gen-doc v1.5.0 // indirect
 	github.com/rs/xid v1.2.1
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/afero v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
+	go.elastic.co/apm/module/apmgrpc v1.15.0
+	go.elastic.co/apm/module/apmlogrus v1.15.0
 	go.opencensus.io v0.23.0
 	golang.org/x/net v0.0.0-20210224082022-3d97a244fca7
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
@@ -54,7 +55,8 @@ require (
 	google.golang.org/api v0.35.0 // indirect
 	google.golang.org/genproto v0.0.0-20210224155714-063164c882e6
 	google.golang.org/grpc v1.36.0
-	google.golang.org/protobuf v1.25.1-0.20201208041424-160c7477e0e8
+	google.golang.org/grpc/examples v0.0.0-20220215234149-ec717cad7395 // indirect
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/api v0.0.0-20191004102349-159aefb8556b // kubernetes-1.14.10

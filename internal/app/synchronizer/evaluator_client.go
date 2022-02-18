@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"open-match.dev/open-match/internal/config"
+	"open-match.dev/open-match/internal/logging"
 	"open-match.dev/open-match/internal/rpc"
 	"open-match.dev/open-match/pkg/pb"
 )
@@ -206,7 +207,7 @@ func (ec *httpEvaluatorClient) evaluate(ctx context.Context, pc <-chan []*pb.Mat
 		defer func() {
 			wg.Done()
 			if reqw.Close() != nil {
-				logger.Warning("failed to close response body read closer")
+				logger.WithFields(logging.TraceContext(ctx)).Warning("failed to close response body read closer")
 			}
 		}()
 		for proposals := range pc {
@@ -238,7 +239,7 @@ func (ec *httpEvaluatorClient) evaluate(ctx context.Context, pc <-chan []*pb.Mat
 	}
 	defer func() {
 		if resp.Body.Close() != nil {
-			logger.Warning("failed to close response body read closer")
+			logger.WithFields(logging.TraceContext(ctx)).Warning("failed to close response body read closer")
 		}
 	}()
 

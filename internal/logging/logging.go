@@ -16,10 +16,12 @@
 package logging
 
 import (
+	"context"
 	"strings"
 
 	stackdriver "github.com/TV4/logrus-stackdriver-formatter"
 	"github.com/sirupsen/logrus"
+	"go.elastic.co/apm/module/apmlogrus"
 	"open-match.dev/open-match/internal/config"
 )
 
@@ -89,4 +91,10 @@ func isDebugLevel(level logrus.Level) bool {
 		return true
 	}
 	return false
+}
+
+// TraceContext returns zap.Fields containing the trace context
+// of the transaction and span contained in ctx, if any.
+func TraceContext(ctx context.Context) logrus.Fields {
+	return apmlogrus.TraceContext(ctx)
 }

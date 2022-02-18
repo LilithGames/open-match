@@ -27,18 +27,22 @@ import (
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpc_tracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"go.elastic.co/apm/module/apmgrpc"
 	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 	"google.golang.org/grpc"
+	ggrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"open-match.dev/open-match/internal/config"
 	"open-match.dev/open-match/internal/logging"
 	"open-match.dev/open-match/internal/telemetry"
+	"open-match.dev/open-match/pkg/ctxmetadata"
 )
 
 const (
@@ -268,6 +272,8 @@ func newGRPCServerOptions(params *ServerParams) []grpc.ServerOption {
 	ui := []grpc.UnaryServerInterceptor{
 		grpc_recovery.UnaryServerInterceptor(),
 		grpc_validator.UnaryServerInterceptor(),
+		metadataUnaryServerInterceptor(),
+		apmgrpc.NewUnaryServerInterceptor(),
 		grpc_tracing.UnaryServerInterceptor(),
 	}
 	if params.enableRPCLogging {
@@ -326,4 +332,31 @@ func serverUnaryInterceptor(ctx context.Context,
 		serverLogger.Error(err)
 	}
 	return h, err
+}
+
+// metadataUnaryServerInterceptor transfer ctxmetadata to grpc metadata
+func metadataUnaryServerInterceptor() ggrpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *ggrpc.UnaryServerInfo, handler ggrpc.UnaryHandler) (resp interface{}, err error) {
+		nmd := metautils.ExtractIncoming(ctx)
+		md := ctxmetadata.FromContext(ctx)
+		for k := range nmd {
+			v := nmd.Get(k)
+			md[k] = v
+		}
+		ctx = ctxmetadata.ToContext(ctx, md)
+		return handler(ctx, req)
+	}
+}
+
+// metadataUnaryClientInterceptor transfer grpc metadata to ctxmetadata
+func metadataUnaryClientInterceptor() ggrpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply interface{}, cc *ggrpc.ClientConn, invoker ggrpc.UnaryInvoker, opts ...ggrpc.CallOption) error {
+		md := ctxmetadata.FromContext(ctx)
+		nmd := metautils.ExtractOutgoing(ctx)
+		for k, v := range md {
+			nmd.Add(k, v)
+		}
+		ctx = nmd.ToOutgoing(ctx)
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }

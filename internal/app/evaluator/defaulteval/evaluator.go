@@ -27,6 +27,7 @@ import (
 	"go.opencensus.io/stats/view"
 	"open-match.dev/open-match/internal/app/evaluator"
 	"open-match.dev/open-match/internal/appmain"
+	"open-match.dev/open-match/internal/logging"
 	"open-match.dev/open-match/pkg/pb"
 )
 
@@ -75,7 +76,7 @@ func evaluate(ctx context.Context, in <-chan *pb.Match, out chan<- string) error
 		if a, ok := m.Extensions["evaluation_input"]; ok {
 			err := ptypes.UnmarshalAny(a, inp)
 			if err != nil {
-				logger.WithFields(logrus.Fields{
+				logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 					"match_id": m.MatchId,
 					"error":    err,
 				}).Error("Failed to unmarshal match's DefaultEvaluationCriteria.  Rejecting match.")
@@ -91,7 +92,7 @@ func evaluate(ctx context.Context, in <-chan *pb.Match, out chan<- string) error
 	}
 
 	if nilEvaluationInputs > 0 {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"count": nilEvaluationInputs,
 		}).Info("Some matches don't have the optional field evaluation_input set.")
 	}

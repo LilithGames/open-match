@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/status"
 	"open-match.dev/open-match/internal/config"
 	"open-match.dev/open-match/internal/ipb"
+	"open-match.dev/open-match/internal/logging"
 	"open-match.dev/open-match/pkg/pb"
 )
 
@@ -243,7 +244,7 @@ func (rb *redisBackend) DeleteBackfillCompletely(ctx context.Context, id string)
 
 	defer func() {
 		if _, err = m.Unlock(ctx); err != nil {
-			logger.WithError(err).Error("error on mutex unlock")
+			logger.WithFields(logging.TraceContext(ctx)).WithError(err).Error("error on mutex unlock")
 		}
 	}()
 
@@ -258,7 +259,7 @@ func (rb *redisBackend) DeleteBackfillCompletely(ctx context.Context, id string)
 	// 2. get associated with a current backfill tickets ids
 	_, associatedTickets, err := rb.GetBackfill(ctx, id)
 	if err != nil {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"error":       err.Error(),
 			"backfill_id": id,
 		}).Error("DeleteBackfillCompletely - failed to GetBackfill")
@@ -267,7 +268,7 @@ func (rb *redisBackend) DeleteBackfillCompletely(ctx context.Context, id string)
 	// 3. delete associated tickets from pending release state
 	err = rb.DeleteTicketsFromPendingRelease(ctx, associatedTickets)
 	if err != nil {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"error":       err.Error(),
 			"backfill_id": id,
 		}).Error("DeleteBackfillCompletely - failed to DeleteTicketsFromPendingRelease")
@@ -276,7 +277,7 @@ func (rb *redisBackend) DeleteBackfillCompletely(ctx context.Context, id string)
 	// 4. delete backfill
 	err = rb.DeleteBackfill(ctx, id)
 	if err != nil {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"error":       err.Error(),
 			"backfill_id": id,
 		}).Error("DeleteBackfillCompletely - failed to DeleteBackfill")
@@ -290,7 +291,7 @@ func (rb *redisBackend) cleanupWorker(ctx context.Context, backfillIDsCh <-chan 
 	for id := range backfillIDsCh {
 		err = rb.DeleteBackfillCompletely(ctx, id)
 		if err != nil {
-			logger.WithFields(logrus.Fields{
+			logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 				"error":       err.Error(),
 				"backfill_id": id,
 			}).Error("CleanupBackfills")

@@ -27,6 +27,7 @@ import (
 	"open-match.dev/open-match/internal/appmain/contextcause"
 	"open-match.dev/open-match/internal/config"
 	"open-match.dev/open-match/internal/ipb"
+	"open-match.dev/open-match/internal/logging"
 	"open-match.dev/open-match/internal/statestore"
 	"open-match.dev/open-match/pkg/pb"
 )
@@ -411,7 +412,7 @@ func (c *cutoffSender) cutoff() {
 func (s *synchronizerService) wrapEvaluator(ctx context.Context, cancel contextcause.CancelErrFunc, m4c <-chan []*pb.Match, m5c chan<- string) {
 	err := s.eval.evaluate(ctx, m4c, m5c)
 	if err != nil {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"error": err,
 		}).Error("error calling evaluator, canceling cycle")
 		cancel(fmt.Errorf("error calling evaluator: %w", err))
@@ -456,7 +457,7 @@ func (s *synchronizerService) addMatchesToPendingRelease(ctx context.Context, m 
 			if ok {
 				ids = append(ids, tids.([]string)...)
 			} else {
-				logger.Errorf("failed to get MatchId %s with its corresponding tickets from the cache", mID)
+				logger.WithFields(logging.TraceContext(ctx)).Errorf("failed to get MatchId %s with its corresponding tickets from the cache", mID)
 			}
 		}
 
@@ -475,7 +476,7 @@ func (s *synchronizerService) addMatchesToPendingRelease(ctx context.Context, m 
 	}
 
 	if lastErr != nil {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"error":             lastErr.Error(),
 			"totalMatches":      totalMatches,
 			"successfulMatches": successfulMatches,

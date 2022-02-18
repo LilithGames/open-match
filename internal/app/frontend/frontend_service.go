@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"open-match.dev/open-match/internal/config"
+	"open-match.dev/open-match/internal/logging"
 	"open-match.dev/open-match/internal/statestore"
 	"open-match.dev/open-match/pkg/pb"
 )
@@ -50,6 +51,8 @@ var (
 //   - If a TicketId exists in a Ticket request, an auto-generated TicketId will override this field.
 //   - If SearchFields exist in a Ticket, CreateTicket will also index these fields such that one can query the ticket with query.QueryTickets function.
 func (s *frontendService) CreateTicket(ctx context.Context, req *pb.CreateTicketRequest) (*pb.Ticket, error) {
+	logger.WithFields(logging.TraceContext(ctx)).Info("CreateTicket")
+
 	// Perform input validation.
 	if req.Ticket == nil {
 		return nil, status.Errorf(codes.InvalidArgument, ".ticket is required")
@@ -100,6 +103,8 @@ func doCreateTicket(ctx context.Context, req *pb.CreateTicketRequest, store stat
 // A Backfill is considered as ready for matchmaking once it is created.
 //   - If SearchFields exist in a Backfill, CreateBackfill will also index these fields such that one can query the ticket with query.QueryBackfills function.
 func (s *frontendService) CreateBackfill(ctx context.Context, req *pb.CreateBackfillRequest) (*pb.Backfill, error) {
+	logger.WithFields(logging.TraceContext(ctx)).Info("CreateBackfill")
+
 	// Perform input validation.
 	if req == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "request is nil")
@@ -172,7 +177,7 @@ func (s *frontendService) UpdateBackfill(ctx context.Context, req *pb.UpdateBack
 	}
 	defer func() {
 		if _, err = m.Unlock(ctx); err != nil {
-			logger.WithError(err).Error("error on mutex unlock")
+			logger.WithFields(logging.TraceContext(ctx)).WithError(err).Error("error on mutex unlock")
 		}
 	}()
 	bfStored, associatedTickets, err := s.store.GetBackfill(ctx, bfID)
@@ -198,7 +203,7 @@ func (s *frontendService) UpdateBackfill(ctx context.Context, req *pb.UpdateBack
 
 	err = s.store.IndexBackfill(ctx, bfStored)
 	if err != nil {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"error": err.Error(),
 			"id":    bfStored.Id,
 		}).Error("failed to index the backfill")
@@ -217,7 +222,7 @@ func (s *frontendService) DeleteBackfill(ctx context.Context, req *pb.DeleteBack
 	err := s.store.DeleteBackfillCompletely(ctx, bfID)
 	// Deleting of Backfill is inevitable when it is expired, so we don't worry about error here
 	if err != nil {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"error": err.Error(),
 		}).Error("error on DeleteBackfill")
 	}
@@ -250,14 +255,14 @@ func doDeleteTicket(ctx context.Context, id string, store statestore.Service) er
 		defer span.End()
 		err := store.DeleteTicket(ctx, id)
 		if err != nil {
-			logger.WithFields(logrus.Fields{
+			logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 				"error": err.Error(),
 				"id":    id,
 			}).Error("failed to delete the ticket")
 		}
 		err = store.DeleteTicketsFromPendingRelease(ctx, []string{id})
 		if err != nil {
-			logger.WithFields(logrus.Fields{
+			logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 				"error": err.Error(),
 				"id":    id,
 			}).Error("failed to delete the ticket from pendingRelease")
@@ -333,7 +338,7 @@ func (s *frontendService) AcknowledgeBackfill(ctx context.Context, req *pb.Ackno
 	}
 	defer func() {
 		if _, err = m.Unlock(ctx); err != nil {
-			logger.WithError(err).Error("error on mutex unlock")
+			logger.WithFields(logging.TraceContext(ctx)).WithError(err).Error("error on mutex unlock")
 		}
 	}()
 
@@ -364,13 +369,13 @@ func (s *frontendService) AcknowledgeBackfill(ctx context.Context, req *pb.Ackno
 
 		// log errors returned from UpdateAssignments to track tickets with NotFound errors
 		for _, f := range setResp.Failures {
-			logger.Errorf("failed to assign ticket %s, cause %d", f.TicketId, f.Cause)
+			logger.WithFields(logging.TraceContext(ctx)).Errorf("failed to assign ticket %s, cause %d", f.TicketId, f.Cause)
 		}
 		for _, id := range associatedTickets {
 			err = s.store.DeindexTicket(ctx, id)
 			// Try to deindex all input tickets. Log without returning an error if the deindexing operation failed.
 			if err != nil {
-				logger.WithError(err).Errorf("failed to deindex ticket %s after updating the assignments", id)
+				logger.WithFields(logging.TraceContext(ctx)).WithError(err).Errorf("failed to deindex ticket %s after updating the assignments", id)
 			}
 		}
 

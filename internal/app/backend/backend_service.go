@@ -38,6 +38,7 @@ import (
 	"google.golang.org/grpc/status"
 	"open-match.dev/open-match/internal/appmain/contextcause"
 	"open-match.dev/open-match/internal/ipb"
+	"open-match.dev/open-match/internal/logging"
 	"open-match.dev/open-match/internal/rpc"
 	"open-match.dev/open-match/internal/statestore"
 	"open-match.dev/open-match/pkg/pb"
@@ -186,7 +187,7 @@ func synchronizeRecv(ctx context.Context, syncStream synchronizerStream, m *sync
 					if err == errBackfillGenerationMismatch || (ok && e.Code() == codes.NotFound) {
 						err = doReleaseTickets(ctx, ticketIds, store)
 						if err != nil {
-							logger.WithError(err).Errorf("failed to remove match tickets from pending release: %v", ticketIds)
+							logger.WithFields(logging.TraceContext(ctx)).WithError(err).Errorf("failed to remove match tickets from pending release: %v", ticketIds)
 						}
 
 						continue
@@ -222,15 +223,19 @@ func callMmf(ctx context.Context, cc *rpc.ClientCache, req *pb.FetchMatchesReque
 }
 
 func callGrpcMmf(ctx context.Context, cc *rpc.ClientCache, profile *pb.MatchProfile, address string, proposals chan<- *pb.Match) error {
+	logger.WithFields(logging.TraceContext(ctx)).Infof("callGrpcMmf address:%v", address)
+
 	var conn *grpc.ClientConn
 	conn, err := cc.GetGRPC(address)
 	if err != nil {
+		logger.WithFields(logging.TraceContext(ctx)).WithError(err).Errorf("callGrpcMmf address:%v", address)
 		return status.Error(codes.InvalidArgument, "failed to establish grpc client connection to match function")
 	}
 	client := pb.NewMatchFunctionClient(conn)
 
 	stream, err := client.Run(ctx, &pb.RunRequest{Profile: profile})
 	if err != nil {
+		logger.WithFields(logging.TraceContext(ctx)).WithError(err).Errorf("callGrpcMmf client.Run")
 		err = errors.Wrap(err, "failed to run match function for profile")
 		if ctx.Err() != nil {
 			// gRPC likes to suppress the context's error, so stop that.
@@ -287,7 +292,7 @@ func callHTTPMmf(ctx context.Context, cc *rpc.ClientCache, profile *pb.MatchProf
 	defer func() {
 		err = resp.Body.Close()
 		if err != nil {
-			logger.WithError(err).Warning("failed to close response body read closer")
+			logger.WithFields(logging.TraceContext(ctx)).WithError(err).Warning("failed to close response body read closer")
 		}
 	}()
 
@@ -388,7 +393,7 @@ func createOrUpdateBackfill(ctx context.Context, backfill *pb.Backfill, ticketId
 	defer func() {
 		_, unlockErr := m.Unlock(ctx)
 		if unlockErr != nil {
-			logger.WithFields(logrus.Fields{"backfill_id": backfill.Id}).WithError(unlockErr).Error("failed to make unlock")
+			logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{"backfill_id": backfill.Id}).WithError(unlockErr).Error("failed to make unlock")
 		}
 	}()
 
@@ -398,7 +403,7 @@ func createOrUpdateBackfill(ctx context.Context, backfill *pb.Backfill, ticketId
 	}
 
 	if b.Generation != backfill.Generation {
-		logger.WithFields(logrus.Fields{"backfill_id": backfill.Id}).
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{"backfill_id": backfill.Id}).
 			WithError(errBackfillGenerationMismatch).
 			Errorf("failed to update backfill, expecting: %d generation but got: %d", b.Generation, backfill.Generation)
 		return errBackfillGenerationMismatch
@@ -425,7 +430,7 @@ func doAssignTickets(ctx context.Context, req *pb.AssignTicketsRequest, store st
 	for _, ticket := range tickets {
 		err = recordTimeToAssignment(ctx, ticket)
 		if err != nil {
-			logger.WithError(err).Errorf("failed to record time to assignment for ticket %s", ticket.Id)
+			logger.WithFields(logging.TraceContext(ctx)).WithError(err).Errorf("failed to record time to assignment for ticket %s", ticket.Id)
 		}
 	}
 
@@ -440,12 +445,12 @@ func doAssignTickets(ctx context.Context, req *pb.AssignTicketsRequest, store st
 		// Try to deindex all input tickets. Log without returning an error if the deindexing operation failed.
 		// TODO: consider retry the index operation
 		if err != nil {
-			logger.WithError(err).Errorf("failed to deindex ticket %s after updating the assignments", id)
+			logger.WithFields(logging.TraceContext(ctx)).WithError(err).Errorf("failed to deindex ticket %s after updating the assignments", id)
 		}
 	}
 
 	if err = store.DeleteTicketsFromPendingRelease(ctx, ids); err != nil {
-		logger.WithFields(logrus.Fields{
+		logger.WithFields(logging.TraceContext(ctx)).WithFields(logrus.Fields{
 			"ticket_ids": ids,
 		}).Error(err)
 	}
