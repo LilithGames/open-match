@@ -74,7 +74,14 @@ func doCreateTicket(ctx context.Context, req *pb.CreateTicketRequest, store stat
 		return nil, status.Error(codes.Internal, "failed to clone input ticket proto")
 	}
 
-	ticket.Id = xid.New().String()
+	// if provide ticketId use ticketId
+	// client should ensure id unique
+	if len(req.Ticket.Id) > 0 {
+		ticket.Id = req.Ticket.Id
+	} else {
+		ticket.Id = xid.New().String()
+	}
+
 	ticket.CreateTime = ptypes.TimestampNow()
 
 	sfCount := 0
